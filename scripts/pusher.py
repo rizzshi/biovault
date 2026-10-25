@@ -66,6 +66,7 @@ def github_push(project_path: pathlib.Path, name_override: str = None):
         subprocess.run(["git", "remote", "add", "origin", f"https://github.com/{os.getenv('GITHUB_USERNAME', 'rizzshi')}/{slug}.git"], cwd=project_path)
     run(["git", "add", "."], cwd=project_path)
     subprocess.run(["git", "commit", "-m", f"update {slug}"], cwd=project_path)
+    subprocess.run(["git", "pull", "--rebase", "origin", "main"], cwd=project_path)
     run(["git", "push", "-u", "origin", "HEAD"], cwd=project_path)
     print(f"Pushed to GitHub: https://github.com/{os.getenv('GITHUB_USERNAME', 'rizzshi')}/{slug}")
 
