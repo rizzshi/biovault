@@ -1,14 +1,4 @@
----
-title: BioVault — Privacy-Preserving IoMT Threat Detection
-emoji: 🏥
-colorFrom: blue
-colorTo: indigo
-sdk: gradio
-sdk_version: 6.30.0
-app_file: app.py
-pinned: false
-license: mit
----
+
 
 # BioVault: Privacy-Preserving Federated Threat Detection for IoMT
 
