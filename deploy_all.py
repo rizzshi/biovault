@@ -89,21 +89,22 @@ def deploy_kaggle(username: str, api_key: str | None = None) -> bool:
 
 
 def main() -> None:
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
+
     parser = argparse.ArgumentParser(description="Deploy BioVault to GitHub, Hugging Face, and Kaggle")
-    parser.add_argument("--github-repo", type=str, help="Target GitHub repository URL (e.g. https://github.com/user/biovault.git)")
-    parser.add_argument("--github-token", type=str, help="GitHub Personal Access Token (or set GITHUB_TOKEN)")
-    parser.add_argument("--hf-space", type=str, help="Hugging Face Space ID (e.g. username/biovault)")
-    parser.add_argument("--hf-token", type=str, help="Hugging Face User Access Token (or set HF_TOKEN)")
-    parser.add_argument("--kaggle-user", type=str, help="Kaggle username (or set KAGGLE_USERNAME)")
-    parser.add_argument("--kaggle-key", type=str, help="Kaggle API key (or set KAGGLE_KEY)")
+    parser.add_argument("--github-repo", type=str, default=os.environ.get("GITHUB_REPO_URL"), help="Target GitHub repository URL (e.g. https://github.com/user/biovault.git)")
+    parser.add_argument("--github-token", type=str, default=os.environ.get("GITHUB_TOKEN"), help="GitHub Personal Access Token")
+    parser.add_argument("--hf-space", type=str, default=os.environ.get("HF_SPACE_ID"), help="Hugging Face Space ID (e.g. username/biovault)")
+    parser.add_argument("--hf-token", type=str, default=os.environ.get("HF_TOKEN"), help="Hugging Face User Access Token")
+    parser.add_argument("--kaggle-user", type=str, default=os.environ.get("KAGGLE_USERNAME"), help="Kaggle username")
+    parser.add_argument("--kaggle-key", type=str, default=os.environ.get("KAGGLE_KEY"), help="Kaggle API key")
     parser.add_argument("--dry-run", action="store_true", help="Validate files and settings without pushing")
 
     args = parser.parse_args()
-
-    gh_token = args.github_token or os.environ.get("GITHUB_TOKEN")
-    hf_token = args.hf_token or os.environ.get("HF_TOKEN")
-    kg_user = args.kaggle_user or os.environ.get("KAGGLE_USERNAME")
-    kg_key = args.kaggle_key or os.environ.get("KAGGLE_KEY")
 
     if args.dry_run:
         print("Dry-run validation successful. Deployment script ready.")
@@ -111,11 +112,11 @@ def main() -> None:
 
     results = {}
     if args.github_repo:
-        results["github"] = deploy_github(args.github_repo, gh_token)
+        results["github"] = deploy_github(args.github_repo, args.github_token)
     if args.hf_space:
-        results["huggingface"] = deploy_huggingface(args.hf_space, hf_token)
-    if kg_user:
-        results["kaggle"] = deploy_kaggle(kg_user, kg_key)
+        results["huggingface"] = deploy_huggingface(args.hf_space, args.hf_token)
+    if args.kaggle_user:
+        results["kaggle"] = deploy_kaggle(args.kaggle_user, args.kaggle_key)
 
     print("\n" + "=" * 60)
     print("Deployment Summary:")
