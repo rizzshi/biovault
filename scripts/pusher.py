@@ -13,14 +13,51 @@ def run(cmd, cwd):
     print(f"$ {' '.join(cmd)}")
     subprocess.run(cmd, cwd=cwd, check=True, shell=os.name=='nt')
 
-def github_push(project_path: pathlib.Path):
+def get_project_slug(project_path: pathlib.Path, explicit_name: str = None) -> tuple[str, str]:
+    if explicit_name:
+        slug = explicit_name.replace(" ", "-").lower()
+        return slug, explicit_name
+    
+    meta_path = project_path / "dataset-metadata.json"
+    if meta_path.exists():
+        try:
+            m = json.loads(meta_path.read_text(encoding="utf-8"))
+            if "id" in m and "/" in m["id"]:
+                return m["id"].split("/")[1], m.get("title", project_path.name)
+        except Exception:
+            pass
+
+    citation = project_path / "CITATION.cff"
+    if citation.exists():
+        for line in citation.read_text(encoding="utf-8").splitlines():
+            if line.startswith("title:"):
+                raw_title = line.split(":", 1)[1].strip(" '\"")
+                slug = raw_title.split(":")[0].strip().replace(" ", "-").lower()
+                return slug, raw_title
+
+    readme = project_path / "README.md"
+    if readme.exists():
+        for line in readme.read_text(encoding="utf-8").splitlines():
+            if line.startswith("title:"):
+                raw_title = line.split(":", 1)[1].strip(" '\"")
+                slug = raw_title.split("—")[0].split(":")[0].strip().replace(" ", "-").lower()
+                return slug, raw_title
+            if line.startswith("# "):
+                raw_title = line.replace("# ", "").strip()
+                slug = raw_title.split(":")[0].strip().replace(" ", "-").lower()
+                return slug, raw_title
+
+    slug = project_path.name.replace(" ", "-").lower()
+    return slug, project_path.name
+
+def github_push(project_path: pathlib.Path, name_override: str = None):
     project_path = project_path.resolve()
+    slug, title = get_project_slug(project_path, name_override)
     if not (project_path / ".git").exists():
         run(["git", "init"], cwd=project_path)
         run(["git", "add", "."], cwd=project_path)
         run(["git", "commit", "-m", "initial commit"], cwd=project_path)
     res = subprocess.run(["git", "remote", "get-url", "origin"], cwd=project_path, capture_output=True, text=True)
-    slug = project_path.name.replace(" ", "-").lower()
     if res.returncode != 0:
         try:
             run(["gh", "repo", "create", slug, "--source", ".", "--public"], cwd=project_path)
@@ -28,15 +65,15 @@ def github_push(project_path: pathlib.Path):
             print(f"gh repo note: {e}")
         subprocess.run(["git", "remote", "add", "origin", f"https://github.com/{os.getenv('GITHUB_USERNAME', 'rizzshi')}/{slug}.git"], cwd=project_path)
     run(["git", "add", "."], cwd=project_path)
-    subprocess.run(["git", "commit", "-m", "auto push"], cwd=project_path)
+    subprocess.run(["git", "commit", "-m", f"update {slug}"], cwd=project_path)
     run(["git", "push", "-u", "origin", "HEAD"], cwd=project_path)
     print(f"Pushed to GitHub: https://github.com/{os.getenv('GITHUB_USERNAME', 'rizzshi')}/{slug}")
 
-def hf_push(project_path: pathlib.Path):
+def hf_push(project_path: pathlib.Path, name_override: str = None):
     from huggingface_hub import HfApi
     api = HfApi()
     username = os.getenv("HF_USERNAME") or "v2xvi"
-    slug = project_path.name.replace(" ", "-").lower()
+    slug, title = get_project_slug(project_path, name_override)
     repo_id = f"{username}/{slug}"
     api.create_repo(repo_id=repo_id, exist_ok=True)
     api.upload_folder(
@@ -46,15 +83,15 @@ def hf_push(project_path: pathlib.Path):
     )
     print(f"Pushed to HF: https://huggingface.co/{repo_id}")
 
-def kaggle_push(project_path: pathlib.Path):
+def kaggle_push(project_path: pathlib.Path, name_override: str = None):
     project_path = project_path.resolve()
-    slug = project_path.name.replace(" ", "-").lower()
+    slug, title = get_project_slug(project_path, name_override)
     if len(slug) < 6:
         slug = f"{slug}-dataset"
     meta = project_path / "dataset-metadata.json"
     username = os.getenv("KAGGLE_USERNAME") or "tfisthis"
     if not meta.exists():
-        template = {"title": project_path.name, "id": f"{username}/{slug}", "licenses": [{"name": "mit"}]}
+        template = {"title": title, "id": f"{username}/{slug}", "licenses": [{"name": "mit"}]}
         meta.write_text(json.dumps(template, indent=2))
     cmd_create = ["kaggle", "datasets", "create", "-p", str(project_path), "--ignore-patterns", ".env*"]
     print(f"$ {' '.join(cmd_create)}")
@@ -68,6 +105,7 @@ def kaggle_push(project_path: pathlib.Path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--project", default=".")
+    parser.add_argument("--name", default=None, help="Explicit project name / slug override")
     parser.add_argument("--to", nargs="+", choices=["github","kaggle","hf","all"], default=["all"])
     parser.add_argument("--all-projects", action="store_true")
     args = parser.parse_args()
@@ -78,13 +116,14 @@ if __name__ == "__main__":
     else:
         projects = [pathlib.Path(args.project).resolve()]
     for proj in projects:
-        print(f"\n=== Pushing {proj.name} ===")
+        slug, title = get_project_slug(proj, args.name)
+        print(f"\n=== Pushing {title} ({slug}) ===")
         if "github" in targets:
-            try: github_push(proj)
+            try: github_push(proj, args.name)
             except Exception as e: print(f"GitHub Error: {e}")
         if "hf" in targets:
-            try: hf_push(proj)
+            try: hf_push(proj, args.name)
             except Exception as e: print(f"HF Error: {e}")
         if "kaggle" in targets:
-            try: kaggle_push(proj)
+            try: kaggle_push(proj, args.name)
             except Exception as e: print(f"Kaggle Error: {e}")
