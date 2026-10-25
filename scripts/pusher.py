@@ -56,10 +56,13 @@ def kaggle_push(project_path: pathlib.Path):
     if not meta.exists():
         template = {"title": project_path.name, "id": f"{username}/{slug}", "licenses": [{"name": "mit"}]}
         meta.write_text(json.dumps(template, indent=2))
-    try:
-        run(["kaggle", "datasets", "create", "-p", str(project_path), "--ignore-patterns", ".env*"], cwd=project_path)
-    except:
+    cmd_create = ["kaggle", "datasets", "create", "-p", str(project_path), "--ignore-patterns", ".env*"]
+    print(f"$ {' '.join(cmd_create)}")
+    res = subprocess.run(cmd_create, cwd=project_path, capture_output=True, text=True, shell=os.name=='nt')
+    if "already in use" in res.stdout.lower() or res.returncode != 0:
         run(["kaggle", "datasets", "version", "-p", str(project_path), "-m", "auto update", "--ignore-patterns", ".env*"], cwd=project_path)
+    else:
+        print(res.stdout)
     print(f"Pushed to Kaggle: https://www.kaggle.com/datasets/{username}/{slug}")
 
 if __name__ == "__main__":
