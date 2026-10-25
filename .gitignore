@@ -1,0 +1,28 @@
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Environments & secrets
+.env
+.env.*
+!.env.example
+
+# Raw large datasets
+data/*.csv
+!data/README.md
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temporary scratch files
+scratch_*.py

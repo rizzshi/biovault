@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use or build upon BioVault in your research, please cite it as below."
+title: "BioVault: Privacy-Preserving Federated Threat Detection for IoMT with Differential Privacy"
+authors:
+  - name: "BioVault Contributors"
+version: 0.1.0
+date-released: 2026-10-24
+url: "https://github.com/your-org/biovault"
+repository-code: "https://github.com/your-org/biovault"
+keywords:
+  - "federated learning"
+  - "differential privacy"
+  - "internet of medical things"
+  - "opacus"
+  - "flower"
+  - "ransomware detection"
+  - "cybersecurity"
+  - "hipaa compliance"
+license: MIT
